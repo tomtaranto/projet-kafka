@@ -1,0 +1,36 @@
+strictness: medium
+doc-warnings: false
+test-warnings: false
+autodetect: true
+member-warnings: false
+ignore-paths:
+  - build
+  - bundle
+
+pylint:
+  run: true
+  options:
+    good-names: s3
+    max-line-length: 120
+  disable:
+    missing-docstring
+    logging-fstring-interpolation
+    logging-format-interpolation
+    duplicate-code
+    invalid-name
+    too-many-instance-attributes
+    fixme
+    too-few-public-methods
+
+pep8:
+  run: false
+
+vulture:
+  # currently, it seems a bit too dumb as it classify dataclasses/enums as unused code
+  run: false
+
+mypy:
+  run: false
+  options:
+    strict-optional: true
+    ignore-missing-imports: true
