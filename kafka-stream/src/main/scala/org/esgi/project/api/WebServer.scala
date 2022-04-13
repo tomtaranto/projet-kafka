@@ -6,53 +6,31 @@ import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.state.{QueryableStoreTypes, ReadOnlyKeyValueStore, ReadOnlyWindowStore, WindowStoreIterator}
-import org.esgi.project.api.models.{MeanLatencyForURLResponse, VisitCountResponse}
+import org.esgi.project.api.models.{Data, ViewsCountResponse}
 import org.esgi.project.streaming.StreamProcessing
-
+import org.esgi.project.streaming.StreamProcessing.{lastFiveMinuteStoreName, lastMinuteStoreName, lastPastStoreName}
 
 import java.time.Instant
 import scala.jdk.CollectionConverters._
 
-/**
- * -------------------
- * Part.3 of exercise: Interactive Queries
- * -------------------
- */
+
 object WebServer extends PlayJsonSupport {
   def routes(streams: KafkaStreams): Route = {
     concat(
-      path("visits" / Segment) { period: String =>
+      path("movies" / Segment) { id: String =>
         get {
-          period match {
-            case "30s" =>
-              // TODO: load the store containing the visits count of the last 30 seconds and query it to
-              // TODO: fetch the keys of the last window and its info
-//              val kvStore30Seconds: ReadOnlyWindowStore[String, Long] = ???
+          val kvStore1Minute: ReadOnlyWindowStore[String, Long] = streams.store(lastMinuteStoreName,QueryableStoreTypes.windowStore[String,Long]())
+          val to = Instant.now()
+          val from_one = to.minusSeconds(60)
 
-              complete(
-                List(0)
-              )
-            case "1m" =>
-              // TODO: load the store containing the visits count of the last minute and query it to
-              // TODO: fetch the keys of the last window and its info
-//              val kvStore1Minute: ReadOnlyWindowStore[String, Long] = ???
+          val kvStore5Minute: ReadOnlyWindowStore[String, Long] = streams.store(lastFiveMinuteStoreName,QueryableStoreTypes.windowStore[String,Long]())
+          val from_five = to.minusSeconds(300)
 
-              complete(
-                List(0)
-              )
-            case "5m" =>
-              // TODO: load the store containing the visits count of the last five minutes and query it to
-              // TODO: fetch the keys of the last window and its info
-//              val kvStore5Minute: ReadOnlyWindowStore[String, Long] = ???
+          val kvStoreAll: ReadOnlyWindowStore[String, Long] = streams.store(lastPastStoreName,QueryableStoreTypes.windowStore[String,Long]())
 
-              complete(
-                List(0)
-              )
-            case _ =>
-              // unhandled period asked
-              complete(
-                HttpResponse(StatusCodes.NotFound, entity = "Not found")
-              )
+          complete(
+            val past: List[Data] = kvStore1Minute.fetchAll(from_one, to).asScala.toList.map(k=>Data(k.value.))
+          )
           }
         }
       },

@@ -7,7 +7,7 @@ import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.kstream.{JoinWindows, Printed, TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream._
-import org.esgi.project.streaming.models.{Likes, MeanScoreForMovies, Views, ViewsWithLikes}
+import org.esgi.project.streaming.models.{Likes, MeanScoreForMovies, View2Categories, Views, ViewsWithLikes}
 
 import java.io.InputStream
 import java.time.Duration
@@ -33,13 +33,22 @@ object StreamProcessing extends PlayJsonSupport {
   val likes: KStream[String, Likes] = builder.stream[String, Likes](likesTopicName)
   val views: KStream[String, Views] = builder.stream[String, Views](viewsTopicName)
 
+
   // Nombre de vue par film
   val viewsGroupedByTitle: KGroupedStream[String, Views] = views.groupBy((_, value) => value.title)
-  val viewsGroupedByTitleCategorie: KGroupedStream[String, Views] = views.selectKey((k, v) => v.title+v.view_category)
-    .groupByKey
+//  val viewsGroupedByTitleCategorie: KGroupedStream[String, Views] = views.selectKey((k, v) => v.title+"/"+v.view_category)
+
+//  val viewsGroupedByCategorie: KGroupedStream[String, Views] = views.groupBy((k,v) => v.view_category)
+
+  val viewsTitleCategorie1: KTable[String, Long] = views.filter((k, v) => v.view_category == "start_only").groupBy((k, v) => v.title).count()
+  val viewsTitleCategorie2: KTable[String, Long] = views.filter((k,v) => v.view_category == "half").groupBy((k,v) => v.title).count()
+  val viewsTitleCategorie3: KTable[String, Long] = views.filter((k,v) => v.view_category == "full").groupBy((k,v) => v.title).count()
+
+  val first_join: KTable[String, Long] = viewsTitleCategorie1.join(viewsTitleCategorie2)((v1: Views, v2: Views) => View2Categories(v1._id, v1.title, v1))
+
 
   val windows1: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
-  val viewsOfLast1Minute: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windows1).count()(Materialized.as(lastMinuteStoreName))
+  val viewsOfLast1Minute_1: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windows1).count()(Materialized.as(lastMinuteStoreName))
 
   val windows5: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
   val viewsOfLast5Minute: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windows5).count()(Materialized.as(lastFiveMinuteStoreName))
