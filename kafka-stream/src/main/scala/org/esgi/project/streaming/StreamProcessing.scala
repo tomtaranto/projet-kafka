@@ -1,60 +1,52 @@
 package org.esgi.project.streaming
-
+import org.apache.kafka.streams.kstream.TimeWindows
+import java.time.Duration
 import io.github.azhur.kafkaserdeplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.kstream.{JoinWindows, Printed, TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream._
-import org.esgi.project.streaming.models.{MeanLatencyForURL, Metric, Visit, VisitWithLatency}
+import org.esgi.project.streaming.models.{Likes, MeanLatencyForURL, Metric, Views, Visit, VisitWithLatency}
 
 import java.io.InputStream
 import java.time.Duration
 import java.util.Properties
+import org.apache.kafka.streams.scala.ImplicitConversions._
+import org.apache.kafka.streams.scala.serialization.Serdes._
 
 object StreamProcessing extends PlayJsonSupport {
+  val applicationName = "Foresight"
 
-  import org.apache.kafka.streams.scala.ImplicitConversions._
-  import org.apache.kafka.streams.scala.serialization.Serdes._
+  val likesTopicName: String = "likes"
+  val viewsTopicName: String = "views"
 
-  // TODO: Predeclared store names to be used, fill your first & last name
-  val yourFirstName: String = "Tom"
-  val yourLastName: String = "TARANTO"
-
-  val applicationName = s"web-events-stream-app-$yourFirstName-$yourLastName"
-  val visitsTopicName: String = "visits"
-  val metricsTopicName: String = "metrics"
-
-  val thirtySecondsStoreName: String = "VisitsOfLast30Seconds"
-  val lastMinuteStoreName = "VisitsOfLastMinute"
-  val lastFiveMinutesStoreName = "VisitsOfLast5Minutes"
-
-  val thirtySecondsByCategoryStoreName: String = "VisitsOfLast30SecondsByCategory"
-  val lastMinuteByCategoryStoreName = "VisitsOfLastMinuteByCategory"
-  val lastFiveMinutesByCategoryStoreName = "VisitsOfLast5MinutesByCategory"
-  val meanLatencyForURLStoreName = "MeanLatencyForURL"
+  val lastMinuteStoreName: String = "viewsLastMinuteCategories"
+  val lastFiveMinuteStoreName: String = "viewsLastFiveMinuteCategories"
+  val lastPastStoreName: String = "viewsLastPastategories"
 
   val props = buildProperties
-
-  // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
-  // TODO: declared topic sources to be used
-  val visits: KStream[String, Visit] = builder.stream[String, Visit](visitsTopicName)
-  val metrics: KStream[String, Metric] = builder.stream[String, Metric](metricsTopicName)
+  val likes: KStream[String, Likes] = builder.stream[String, Likes](likesTopicName)
+  val views: KStream[String, Views] = builder.stream[String, Views](viewsTopicName)
 
-  /**
-   * -------------------
-   * Part.1 of exercise
-   * -------------------
-   */
-  // TODO: repartition visits per URL
-  val visitsGroupedByUrl: KGroupedStream[String, Visit] = visits.groupBy((_, value) => value.url)
-  println(visitsGroupedByUrl)
-  // TODO: implement a computation of the visits count per URL for the last 30 seconds,
-  // TODO: the last minute and the last 5 minutes
+  // Nombre de vue par film
+  val viewsGroupedByTitle: KGroupedStream[String, Views] = views.groupBy((_, value) => value.title)
+  val viewsGroupedByTitleCategorie: KGroupedStream[String, Views] = views.selectKey((k, v) => v.title+v.view_category)
+    .groupByKey
 
-  import org.apache.kafka.streams.kstream.TimeWindows
-  import java.time.Duration
+  val windows1: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
+  val viewsOfLast1Minute: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windows1).count()(Materialized.as(lastMinuteStoreName))
+
+  val windows5: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
+  val viewsOfLast5Minute: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windows5).count()(Materialized.as(lastFiveMinuteStoreName))
+
+  val windowsPast: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
+  val viewsOfLastPast: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windowsPast).count()(Materialized.as(lastPastStoreName))
+
+
+
+
 
   val windows30: TimeWindows = TimeWindows.of(Duration.ofSeconds(30)).advanceBy(Duration.ofSeconds(4))
   val visitsOfLast30Seconds: KTable[Windowed[String], Long] =visitsGroupedByUrl.windowedBy(windows30).count()(Materialized.as(thirtySecondsStoreName))
