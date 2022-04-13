@@ -3,7 +3,7 @@ import play.api.libs.json.{Json, OFormat}
 
 case class Likes(
                   _id: Int,
-                  score: Long
+                  score: Float
                 )
 
 object Likes{

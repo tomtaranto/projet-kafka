@@ -49,7 +49,7 @@ object StreamProcessing extends PlayJsonSupport {
 
   val viewsWithLikes: KStream[String, ViewsWithLikes] = views.join(likes)((v:Views, l:Likes) => ViewsWithLikes(v._id, v.title, v.view_category, l.score), JoinWindows.of(Duration.ofMinutes(2)))
 
-  val meanScoreMovie: KTable[String, MeanScoreForMovies] = viewsWithLikes.groupBy(((k,v)=> v.title)).aggregate(MeanScoreForMovies.empty)((_,v,agg) => {agg.increment(v.score)}.computeMeanLatency)(Materialized.as(meanScoreStoreName))
+  val meanScoreMovie: KTable[String, MeanScoreForMovies] = viewsWithLikes.groupBy(((k,v)=> v.title)).aggregate(MeanScoreForMovies.empty)((_,v,agg) => {agg.increment(v.score)}.computeMeanMovies)(Materialized.as(meanScoreStoreName))
 
   meanScoreMovie.inner.toStream().print(Printed.toSysOut())
 

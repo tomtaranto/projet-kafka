@@ -6,7 +6,7 @@ case class ViewsWithLikes(
                              _id: Int,
                              title: String,
                              view_category: String,
-                             score: Long
+                             score: Float
                            )
 
 object ViewsWithLikes {
