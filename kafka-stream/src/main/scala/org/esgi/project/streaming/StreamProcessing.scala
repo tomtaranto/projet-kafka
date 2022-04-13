@@ -1,12 +1,13 @@
 package org.esgi.project.streaming
 import org.apache.kafka.streams.kstream.TimeWindows
+
 import java.time.Duration
 import io.github.azhur.kafkaserdeplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.kstream.{JoinWindows, Printed, TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream._
-import org.esgi.project.streaming.models.{Likes, MeanLatencyForURL, Metric, Views, Visit, VisitWithLatency}
+import org.esgi.project.streaming.models.{Likes, MeanScoreForMovies, Views, ViewsWithLikes}
 
 import java.io.InputStream
 import java.time.Duration
@@ -23,6 +24,8 @@ object StreamProcessing extends PlayJsonSupport {
   val lastMinuteStoreName: String = "viewsLastMinuteCategories"
   val lastFiveMinuteStoreName: String = "viewsLastFiveMinuteCategories"
   val lastPastStoreName: String = "viewsLastPastategories"
+
+  val meanScoreStoreName: String = "meanScoreStoreName"
 
   val props = buildProperties
   val builder: StreamsBuilder = new StreamsBuilder
@@ -44,50 +47,11 @@ object StreamProcessing extends PlayJsonSupport {
   val windowsPast: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
   val viewsOfLastPast: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windowsPast).count()(Materialized.as(lastPastStoreName))
 
+  val viewsWithLikes: KStream[String, ViewsWithLikes] = views.join(likes)((v:Views, l:Likes) => ViewsWithLikes(v._id, v.title, v.view_category, l.score), JoinWindows.of(Duration.ofMinutes(2)))
 
+  val meanScoreMovie: KTable[String, MeanScoreForMovies] = viewsWithLikes.groupBy(((k,v)=> v.title)).aggregate(MeanScoreForMovies.empty)((_,v,agg) => {agg.increment(v.score)}.computeMeanLatency)(Materialized.as(meanScoreStoreName))
 
-
-
-  val windows30: TimeWindows = TimeWindows.of(Duration.ofSeconds(30)).advanceBy(Duration.ofSeconds(4))
-  val visitsOfLast30Seconds: KTable[Windowed[String], Long] =visitsGroupedByUrl.windowedBy(windows30).count()(Materialized.as(thirtySecondsStoreName))
-//  println(visitsOfLast30Seconds.toStream.print(Printed.toSysOut()))
-  val windows1: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
-  val visitsOfLast1Minute: KTable[Windowed[String], Long] = visitsGroupedByUrl.windowedBy(windows1).count()(Materialized.as(lastMinuteStoreName))
-  val windows5: TimeWindows = TimeWindows.of(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(20))
-  val visitsOfLast5Minute: KTable[Windowed[String], Long] = visitsGroupedByUrl.windowedBy(windows5).count()(Materialized.as(lastFiveMinutesStoreName))
-
-  /**
-   * -------------------
-   * Part.2 of exercise
-   * -------------------
-   */
-  // TODO: repartition visits topic per category instead (based on the 2nd part of the URLs)
-//  val visitsGroupedByCategory: KGroupedStream[String, Visit] = visits.filter((key, value) => value.url.startsWith("/store")).groupBy((key, value) => value.url.split('/')(1))
-  val visitsGroupedByCategory: KGroupedStream[String, Visit] = visits.filter((k,v) => v.url.startsWith("/store/"))
-    .groupBy((k,v) => v.url.split('/')(2))
-//  println(visitsGroupedByCategory.inner.count().toStream.print(Printed.toSysOut()))
-  // TODO: implement a computation of the visits count per category for the last 30 seconds,
-  // TODO: the last minute and the last 5 minutes
-  val visitsOfLast30SecondsByCategory: KTable[Windowed[String], Long] = visitsGroupedByCategory.windowedBy(windows30).count()(Materialized.as(thirtySecondsByCategoryStoreName))
-
-  val visitsOfLast1MinuteByCategory: KTable[Windowed[String], Long] = visitsGroupedByCategory.windowedBy(windows1).count()(Materialized.as(lastMinuteByCategoryStoreName))
-
-  val visitsOfLast5MinuteByCategory: KTable[Windowed[String], Long] = visitsGroupedByCategory.windowedBy(windows5).count()(Materialized.as(lastFiveMinutesByCategoryStoreName))
-
-  // TODO: implement a join between the visits topic and the metrics topic,
-  // TODO: knowing the key for correlated events is currently the same UUID (and the same id field).
-  // TODO: the join should be done knowing the correlated events are emitted within a 5 seconds latency.
-  // TODO: the outputted message should be a VisitWithLatency object.
-  val visitsWithMetrics: KStream[String, VisitWithLatency] = visits.join(metrics)((visit:Visit, metric:Metric) => VisitWithLatency(visit._id, visit.timestamp, visit.sourceIp, visit.url, metric.latency), JoinWindows.of(Duration.ofMinutes(2)))
-//  visitsWithMetrics.foreach((k,v)=>println(v.url,v._id,v.latency,v.sourceIp,v.timestamp))
-
-  // TODO: based on the previous join, compute the mean latency per URL
-  val meanLatencyPerUrl: KTable[String, MeanLatencyForURL] = visitsWithMetrics.groupBy(((k,v)=> v.url)).aggregate(MeanLatencyForURL.empty)((_,v,agg) => {agg.increment(v.latency)}.computeMeanLatency)(Materialized.as(meanLatencyForURLStoreName))
-//  println(meanLatencyPerUrl.toStream.print(Printed.toSysOut()))
-//  // -------------------------------------------------------------
-//  // TODO: now that you're here, materialize all of those KTables
-//  // TODO: to stores to be able to query them in Webserver.scala
-//  // -------------------------------------------------------------
+  meanScoreMovie.inner.toStream().print(Printed.toSysOut())
 
 
 
