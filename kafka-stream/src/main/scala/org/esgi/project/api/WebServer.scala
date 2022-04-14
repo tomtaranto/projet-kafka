@@ -36,22 +36,32 @@ object WebServer extends PlayJsonSupport {
                   val row1min: Iterator[Data] = kvStore.fetch(x, from_one, to).asScala.map((v) => {
                     Data(Some(v.value.categorie1_count), Some(v.value.categorie2_count), Some(v.value.categorie3_count))
                   })
-                  println(row1min.take(1).toList.headOption)
+//                  println(row1min.take(1).toList.headOption)
                   val row5min: Iterator[Data] = kvStore.fetch(x, from_five, to).asScala.map((v) => {
                     Data(Some(v.value.categorie1_count), Some(v.value.categorie2_count), Some(v.value.categorie3_count))
                   })
                   val rowAll: Iterator[Data] = kvStore.fetch(x, to.minusSeconds(100000000), to).asScala.map((v) => {
                     Data(Some(v.value.categorie1_count), Some(v.value.categorie2_count), Some(v.value.categorie3_count))
                   })
+//                  val malist = row5min.toList
+//                  println("list : ",malist)
+//
+//                  println("res : ",malist.foldLeft(Data.empty: Data){(acc, data) =>  acc.addData(data.start_only.getOrElse(0f), data.half.getOrElse(0f), data.full.getOrElse(0f))})
+//
+//                  println(malist.foldLeft(Data.empty: Data){(acc, data) =>
+//                    Data(Some(acc.start_only.getOrElse(0f) + data.start_only.getOrElse(0f)),
+//                      Some(acc.half.getOrElse(0f) + data.half.getOrElse(0f)),
+//                      Some(acc.full.getOrElse(0f)+data.full.getOrElse(0f)))})
+//                  println(kvStore.all().asScala.filter(v => v.value._id.toString == id).foldLeft(Data.empty: Data)((a, b) => a.addData(b.value.categorie1_count, b.value.categorie2_count, b.value.categorie3_count)))
 
                   ViewsCountResponse(Some(x),
-                    kvStore.fetch(x, to.minusSeconds(100000000), to).asScala.map(v => v.value.title).take(1).toList.headOption,
+                    kvStore.fetch(x, 0, Instant.now().toEpochMilli).asScala.map(v => v.value.title).take(1).toList.headOption,
                     Some(0),
-                    Stats(rowAll.toList.headOption.foldLeft(Data.empty: Data)((a, b) => a.addData(b.start_only.getOrElse(0f), b.half.getOrElse(0f), b.full.getOrElse(0f))),
-                      row1min.take(1).toList.headOption.getOrElse(Data.empty),
-                      row5min.take(1).toList.headOption.foldLeft(Data.empty: Data)((a, b) => a.addData(b.start_only.getOrElse(0f), b.half.getOrElse(0f), b.full.getOrElse(0f)))
+                    Stats(kvStore.all().asScala.filter(v => v.value._id.toString == id).foldLeft(Data.empty: Data)((a, b) => a.addData(b.value.categorie1_count, b.value.categorie2_count, b.value.categorie3_count)),
+                      row1min.toList.headOption.getOrElse(Data.empty),
+                      row5min.toList.foldLeft(Data.empty: Data)((a, b) => a.addData(b.start_only.getOrElse(0f), b.half.getOrElse(0f), b.full.getOrElse(0f)))
                     )
-                  )
+                  ).computeTotal()
                 })
 
           )
