@@ -12,3 +12,14 @@ object MovieScore {
   implicit val format: OFormat[MovieScore] = Json.format[MovieScore]
 
 }
+
+
+case class MovieView(
+                       title: String,
+                       views: Long
+                     )
+
+object MovieView {
+  implicit val format: OFormat[MovieView] = Json.format[MovieView]
+
+}

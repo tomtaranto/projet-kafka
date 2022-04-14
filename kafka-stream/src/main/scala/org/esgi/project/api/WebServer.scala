@@ -5,8 +5,8 @@ import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.state.{QueryableStoreTypes, ReadOnlyKeyValueStore, ReadOnlyWindowStore}
-import org.esgi.project.api.models.{Data, MovieScore, Stats, ViewsCountResponse}
-import org.esgi.project.streaming.StreamProcessing.{meanScoreStoreName, storeMovieID}
+import org.esgi.project.api.models.{Data, MovieScore, MovieView, Stats, ViewsCountResponse}
+import org.esgi.project.streaming.StreamProcessing.{meanScoreStoreName, storeCountViews, storeMovieID}
 import org.esgi.project.streaming.models.{MeanScoreForMovies, ViewAggregate}
 
 import java.time.Instant
@@ -69,7 +69,44 @@ object WebServer extends PlayJsonSupport {
               .toList.distinct.sortBy(_.score)(implicitly[Ordering[Float]]).reverse.take(10)
           )
         }
+      },
+      path("stats" / "ten" / "worst" / "score") {
+        val kvStore: ReadOnlyKeyValueStore[String, MeanScoreForMovies] = streams.store(meanScoreStoreName, QueryableStoreTypes.keyValueStore[String, MeanScoreForMovies]())
+
+        get {
+          complete(
+
+            kvStore.all().asScala.toList
+              .map((k) => MovieScore(k.value.title, k.value.meanScore))
+              .toList.distinct.sortBy(_.score)(implicitly[Ordering[Float]]).take(10)
+          )
+        }
+      },
+      path("stats" / "ten" / "worst" / "views") {
+        val kvStore: ReadOnlyKeyValueStore[String, Long] = streams.store(storeCountViews, QueryableStoreTypes.keyValueStore[String, Long]())
+
+        get {
+          complete(
+
+            kvStore.all().asScala.toList
+              .map((k) => MovieView(k.key, k.value))
+              .toList.distinct.sortBy(_.views)(implicitly[Ordering[Long]]).take(10)
+          )
+        }
+      },
+      path("stats" / "ten" / "best" / "views") {
+        val kvStore: ReadOnlyKeyValueStore[String, Long] = streams.store(storeCountViews, QueryableStoreTypes.keyValueStore[String, Long]())
+
+        get {
+          complete(
+
+            kvStore.all().asScala.toList
+              .map((k) => MovieView(k.key, k.value))
+              .toList.distinct.sortBy(_.views)(implicitly[Ordering[Long]]).reverse.take(10)
+          )
+        }
       }
+
     )
   }
 

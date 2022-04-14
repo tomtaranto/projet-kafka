@@ -26,6 +26,7 @@ object StreamProcessing extends PlayJsonSupport {
 
   val storeMovieID:String = "storeMovieID1"
   val meanScoreStoreName: String = "meanScoreStoreName2"
+  val storeCountViews: String = "storeCountViews"
 
   val props = buildProperties
   val builder: StreamsBuilder = new StreamsBuilder
@@ -35,7 +36,7 @@ object StreamProcessing extends PlayJsonSupport {
 
 
   // Nombre de vue par film
-  val viewsGroupedByTitle: KGroupedStream[String, Views] = views.groupBy((_, value) => value.title)
+  val viewsGroupedByTitle: KTable[String, Long] = views.groupBy((_, value) => value.title).count()(Materialized.as(storeCountViews))
 //  val viewsGroupedByTitleCategorie: KGroupedStream[String, Views] = views.selectKey((k, v) => v.title+"/"+v.view_category)
 
 //  val viewsGroupedByCategorie: KGroupedStream[String, Views] = views.groupBy((k,v) => v.view_category)
