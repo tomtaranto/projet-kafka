@@ -4,15 +4,15 @@ import play.api.libs.json.{Json, OFormat}
 
 
 case class Stats(
-                past: Data,
-                last_minute: Data,
-                last_five_minutes: Data
+                past: Option[Data],
+                last_minute: Option[Data],
+                last_five_minutes: Option[Data]
                 )
 
 case class Data(
-               start_only: Float,
-               half: Float,
-               full: Float
+               start_only: Option[Float],
+               half: Option[Float],
+               full: Option[Float]
                 )
 
 object Stats {

@@ -3,10 +3,10 @@ package org.esgi.project.api.models
 import play.api.libs.json.{Json, OFormat}
 
 case class ViewsCountResponse(
-                             _id: Int,
-                             title: String,
-                             view_count: Float,
-                             stats: Stats,
+                             _id: Option[Int],
+                             title: Option[String],
+                             view_count: Option[Float],
+                             stats: Option[Stats],
                      )
 
 object ViewsCountResponse {

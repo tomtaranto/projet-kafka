@@ -24,10 +24,7 @@ object StreamProcessing extends PlayJsonSupport {
   val likesTopicName: String = "likes"
   val viewsTopicName: String = "views"
 
-  val lastMinuteStoreName: String = "viewsLastMinuteCategories"
-  val lastFiveMinuteStoreName: String = "viewsLastFiveMinuteCategories"
-  val lastPastStoreName: String = "viewsLastPastategories"
-
+  val storeMovieID:String = "storeMovieID"
   val meanScoreStoreName: String = "meanScoreStoreName"
 
   val props = buildProperties
@@ -43,25 +40,12 @@ object StreamProcessing extends PlayJsonSupport {
 
 //  val viewsGroupedByCategorie: KGroupedStream[String, Views] = views.groupBy((k,v) => v.view_category)
 
-  val viewsTitleCategorie_test:KTable[Int,ViewAggregate] = views.groupBy((k, v) => (v._id))
+  val viewsTitleCategorie_test:KTable[Windowed[Int],ViewAggregate] = views.groupBy((k, v) => (v._id))
+    .windowedBy(TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(60)))
     .aggregate(ViewAggregate.empty)((k,v,agg) => {
       agg.increment(v._id, v.title,v.view_category)
-    } )
+    })(Materialized.as(storeMovieID))
 
-//  val windows1: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
-//  val viewsOfLast1Minute_1: KTable[Windowed[String], Long] = viewsTitleCategorie_test.windowedBy(windows1).count()(Materialized.as(lastMinuteStoreName))
-
-
-
-
-//  val windows1: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
-//  val viewsOfLast1Minute_1: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windows1).count()(Materialized.as(lastMinuteStoreName))
-//
-//  val windows5: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
-//  val viewsOfLast5Minute: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windows5).count()(Materialized.as(lastFiveMinuteStoreName))
-//
-//  val windowsPast: TimeWindows = TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(4))
-//  val viewsOfLastPast: KTable[Windowed[String], Long] = viewsGroupedByTitleCategorie.windowedBy(windowsPast).count()(Materialized.as(lastPastStoreName))
 //
 //  val viewsWithLikes: KStream[String, ViewsWithLikes] = views.join(likes)((v:Views, l:Likes) => ViewsWithLikes(v._id, v.title, v.view_category, l.score), JoinWindows.of(Duration.ofMinutes(2)))
 //
