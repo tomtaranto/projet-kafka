@@ -4,10 +4,10 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
-import org.apache.kafka.streams.state.{QueryableStoreTypes, ReadOnlyWindowStore, WindowStoreIterator}
-import org.esgi.project.api.models.{Data, Stats, ViewsCountResponse}
-import org.esgi.project.streaming.StreamProcessing.storeMovieID
-import org.esgi.project.streaming.models.ViewAggregate
+import org.apache.kafka.streams.state.{QueryableStoreTypes, ReadOnlyKeyValueStore, ReadOnlyWindowStore, WindowStoreIterator}
+import org.esgi.project.api.models.{Data, MovieScore, Stats, ViewsCountResponse}
+import org.esgi.project.streaming.StreamProcessing.{meanScoreStoreName, storeMovieID}
+import org.esgi.project.streaming.models.{MeanScoreForMovies, ViewAggregate}
 
 import java.time.Instant
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
@@ -57,10 +57,22 @@ object WebServer extends PlayJsonSupport {
           )
         }
       },
-      path("latency" / "beginning") {
+      path("stats" / "ten" /"worst"/"score") {
+        println("Requete ")
+        val kvStore: ReadOnlyKeyValueStore[String, MeanScoreForMovies] = streams.store(meanScoreStoreName, QueryableStoreTypes.keyValueStore[String, MeanScoreForMovies]())
+        val availableKeys = kvStore.all().asScala.map(_.key).toList.distinct
+
         get {
           complete(
-            List(0)
+            availableKeys
+              .map(
+                x=> {
+                  kvStore.all().asScala.toList
+                    .map((k)=> MovieScore(k.value.title, k.value.meanScore))
+
+                }
+              )
+              .sortBy(_)(implicitly[Ordering[Float]]).reverse
           )
         }
       }

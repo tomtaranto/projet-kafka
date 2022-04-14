@@ -25,7 +25,7 @@ object StreamProcessing extends PlayJsonSupport {
   val viewsTopicName: String = "views"
 
   val storeMovieID:String = "storeMovieID1"
-  val meanScoreStoreName: String = "meanScoreStoreName"
+  val meanScoreStoreName: String = "meanScoreStoreName2"
 
   val props = buildProperties
   val builder: StreamsBuilder = new StreamsBuilder
@@ -46,12 +46,13 @@ object StreamProcessing extends PlayJsonSupport {
       agg.increment(v._id, v.title,v.view_category)
     })(Materialized.as(storeMovieID))
 
-//
-//  val viewsWithLikes: KStream[String, ViewsWithLikes] = views.join(likes)((v:Views, l:Likes) => ViewsWithLikes(v._id, v.title, v.view_category, l.score), JoinWindows.of(Duration.ofMinutes(2)))
-//
-//  val meanScoreMovie: KTable[String, MeanScoreForMovies] = viewsWithLikes.groupBy(((k,v)=> v.title)).aggregate(MeanScoreForMovies.empty)((_,v,agg) => {agg.increment(v.score)}.computeMeanMovies)(Materialized.as(meanScoreStoreName))
-//
-//  meanScoreMovie.inner.toStream().print(Printed.toSysOut())
+
+  val viewsWithLikes: KStream[String, ViewsWithLikes] = views.join(likes)((v:Views, l:Likes) => ViewsWithLikes(v._id, v.title, v.view_category, l.score), JoinWindows.of(Duration.ofMinutes(2)))
+
+  val meanScoreMovie: KTable[String, MeanScoreForMovies] = viewsWithLikes.groupBy(((k,v)=> v.title)).aggregate(MeanScoreForMovies.empty)((_,v,agg) => {agg.increment(v.title,v.score)}.computeMeanMovies)(Materialized.as(meanScoreStoreName))
+
+  meanScoreMovie.mapValues(v=>v.meanScore)
+
 
 
 
