@@ -47,9 +47,10 @@ object WebServer extends PlayJsonSupport {
                   ViewsCountResponse(Some(x),
                     kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map(v=>v.value.title).take(1).toList.headOption,
                     Some(0),
-                      Stats(row1min.take(1).toList.headOption.getOrElse(Data.empty),
-                        row5min.take(5).toList.headOption.aggregate(Data.empty)().getOrElse(Data.empty),
-                        rowAll.toList.headOption.getOrElse(Data.empty))
+                      Stats( rowAll.toList.headOption.foldLeft(Data.empty:Data)((a,b)=>a.addData(b.start_only.getOrElse(0f),b.half.getOrElse(0f), b.full.getOrElse(0f))),
+                        row1min.take(1).toList.headOption.getOrElse(Data.empty),
+                        row5min.take(1).toList.headOption.foldLeft(Data.empty:Data)((a,b)=>a.addData(b.start_only.getOrElse(0f),b.half.getOrElse(0f), b.full.getOrElse(0f)))
+                       )
                     )
                 })
 
@@ -65,4 +66,6 @@ object WebServer extends PlayJsonSupport {
       }
     )
   }
+
 }
+

@@ -13,7 +13,16 @@ case class Data(
                start_only: Option[Float],
                half: Option[Float],
                full: Option[Float]
-                )
+                ){
+
+  def addData(y1:Float,y2:Float,y3:Float) ={
+    this.copy(start_only = Some(y1 + this.start_only.getOrElse(0f)),
+      half = Some(y2+this.half.getOrElse(0f)),
+      full = Some(y3+this.full.getOrElse(0f)))
+
+  }
+
+}
 
 object Stats {
   implicit val format: OFormat[Stats] = Json.format[Stats]
@@ -25,4 +34,7 @@ object Data {
   implicit val format: OFormat[Data] = Json.format[Data]
 
   def empty: Data = Data(Some(0),Some(0),Some(0))
+
+
 }
+
