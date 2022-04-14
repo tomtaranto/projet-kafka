@@ -18,6 +18,7 @@ object WebServer extends PlayJsonSupport {
     concat(
       path("movies" / Segment) { id: String =>
         get {
+          println(s"request for id : $id")
           val kvStore: ReadOnlyWindowStore[Int, ViewAggregate] = streams.store(storeMovieID, QueryableStoreTypes.windowStore[Int, ViewAggregate]())
           val to = Instant.now()
           val from_one = to.minusSeconds(60)
@@ -26,31 +27,32 @@ object WebServer extends PlayJsonSupport {
           val keys = kvStore.all().asScala.map(_.key.key()).toList.distinct
 
           complete(
+            if (keys.filter(x=>x==id.toInt).toList.isEmpty)
+              List("Movie not found");
+            else
+              keys
+                .filter(x=> x ==id.toInt)
+                .map(x =>{
+                  val row1min = kvStore.fetch(x,from_one, to).asScala.map((v) =>{
+                    Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
+                  })
+                  println(row1min.take(1).toList.headOption)
+                  val row5min = kvStore.fetch(x,from_five, to).asScala.map((v) =>{
+                    Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
+                  })
+                  val rowAll = kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map((v) =>{
+                    Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
+                  })
 
-            keys
-              .filter(x=> x ==id.toInt)
-              .map(x =>{
-                val row1min = kvStore.fetch(x,from_one, to).asScala.map((v) =>{
-                  Data(Some(v.value.categorie1_count).getOrElse(0),Some(v.value.categorie2_count).getOrElse(0),Some(v.value.categorie3_count).getOrElse(0))
+                  ViewsCountResponse(Some(x),
+                    kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map(v=>v.value.title).take(1).toList.headOption,
+                    Some(0),
+                    Some(
+                      Stats(row1min.take(1).toList.headOption.getOrElse(Data.empty),
+                        row5min.take(1).toList.headOption.getOrElse(Data.empty),
+                        rowAll.take(1).toList.headOption.getOrElse(Data.empty))
+                    ).getOrElse(Stats.empty))
                 })
-//                println(row1min.take(1).toList.headOption)
-                val row5min = kvStore.fetch(x,from_five, to).asScala.map((v) =>{
-                  Data(Some(v.value.categorie1_count).getOrElse(0),Some(v.value.categorie2_count).getOrElse(0),Some(v.value.categorie3_count).getOrElse(0))
-                })
-                val rowAll = kvStore.fetch(x,0,to.toEpochMilli).asScala.map((v) =>{
-                  Data(Some(v.value.categorie1_count).getOrElse(0),Some(v.value.categorie2_count).getOrElse(0),Some(v.value.categorie3_count).getOrElse(0))
-                })
-                println(rowAll.take(1).toList.headOption)
-
-                ViewsCountResponse(Some(x),
-                  kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map(v=>v.value.title).take(1).toList.headOption,
-                  Some(0),
-                  Some(
-                    Stats(row1min.take(1).toList.headOption,
-                    row5min.take(1).toList.headOption,
-                    rowAll.take(1).toList.headOption)
-                  )).computeTotal
-              })
 
           )
         }
