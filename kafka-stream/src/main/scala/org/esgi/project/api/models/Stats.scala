@@ -4,9 +4,9 @@ import play.api.libs.json.{Json, OFormat}
 
 
 case class Stats(
-                past: Option[Data],
-                last_minute: Option[Data],
-                last_five_minutes: Option[Data]
+                past: Data,
+                last_minute: Data,
+                last_five_minutes: Data
                 )
 
 case class Data(
@@ -17,8 +17,12 @@ case class Data(
 
 object Stats {
   implicit val format: OFormat[Stats] = Json.format[Stats]
+
+  def empty : Stats = Stats(Data.empty,Data.empty,Data.empty)
 }
 
 object Data {
   implicit val format: OFormat[Data] = Json.format[Data]
+
+  def empty: Data = Data(Some(0),Some(0),Some(0))
 }

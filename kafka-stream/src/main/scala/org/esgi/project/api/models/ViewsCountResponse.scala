@@ -6,7 +6,7 @@ case class ViewsCountResponse(
                              _id: Option[Int],
                              title: Option[String],
                              view_count: Option[Float],
-                             stats: Option[Stats],
+                             stats: Stats,
                      )
 
 object ViewsCountResponse {
