@@ -31,15 +31,16 @@ object WebServer extends PlayJsonSupport {
               .filter(x=> x ==id.toInt)
               .map(x =>{
                 val row1min = kvStore.fetch(x,from_one, to).asScala.map((v) =>{
-                  Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
+                  Data(Some(v.value.categorie1_count).getOrElse(0),Some(v.value.categorie2_count).getOrElse(0),Some(v.value.categorie3_count).getOrElse(0))
                 })
-                println(row1min.take(1).toList.headOption)
+//                println(row1min.take(1).toList.headOption)
                 val row5min = kvStore.fetch(x,from_five, to).asScala.map((v) =>{
-                  Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
+                  Data(Some(v.value.categorie1_count).getOrElse(0),Some(v.value.categorie2_count).getOrElse(0),Some(v.value.categorie3_count).getOrElse(0))
                 })
-                val rowAll = kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map((v) =>{
-                  Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
+                val rowAll = kvStore.fetch(x,0,to.toEpochMilli).asScala.map((v) =>{
+                  Data(Some(v.value.categorie1_count).getOrElse(0),Some(v.value.categorie2_count).getOrElse(0),Some(v.value.categorie3_count).getOrElse(0))
                 })
+                println(rowAll.take(1).toList.headOption)
 
                 ViewsCountResponse(Some(x),
                   kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map(v=>v.value.title).take(1).toList.headOption,
@@ -48,7 +49,7 @@ object WebServer extends PlayJsonSupport {
                     Stats(row1min.take(1).toList.headOption,
                     row5min.take(1).toList.headOption,
                     rowAll.take(1).toList.headOption)
-                  ))
+                  )).computeTotal
               })
 
           )

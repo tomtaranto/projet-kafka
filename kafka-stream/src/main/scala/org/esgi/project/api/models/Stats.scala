@@ -10,13 +10,15 @@ case class Stats(
                 )
 
 case class Data(
-               start_only: Option[Float],
-               half: Option[Float],
-               full: Option[Float]
+               start_only: Float,
+               half: Float,
+               full: Float
                 )
 
 object Stats {
   implicit val format: OFormat[Stats] = Json.format[Stats]
+
+
 }
 
 object Data {
