@@ -20,9 +20,9 @@ object WebServer extends PlayJsonSupport {
         get {
           println(s"request for id : $id")
           val kvStore: ReadOnlyWindowStore[Int, ViewAggregate] = streams.store(storeMovieID, QueryableStoreTypes.windowStore[Int, ViewAggregate]())
-          val to = Instant.now()
-          val from_one = to.minusSeconds(60)
-          val from_five = to.minusSeconds(5*60)
+          val to: Instant = Instant.now()
+          val from_one: Instant = to.minusSeconds(60)
+          val from_five: Instant = to.minusSeconds(5*60)
 
           val keys = kvStore.all().asScala.map(_.key.key()).toList.distinct
 
@@ -33,25 +33,24 @@ object WebServer extends PlayJsonSupport {
               keys
                 .filter(x=> x ==id.toInt)
                 .map(x =>{
-                  val row1min = kvStore.fetch(x,from_one, to).asScala.map((v) =>{
+                  val row1min: Iterator[Data] = kvStore.fetch(x,from_one, to).asScala.map((v) =>{
                     Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
                   })
                   println(row1min.take(1).toList.headOption)
-                  val row5min = kvStore.fetch(x,from_five, to).asScala.map((v) =>{
+                  val row5min: Iterator[Data] = kvStore.fetch(x,from_five, to).asScala.map((v) =>{
                     Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
                   })
-                  val rowAll = kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map((v) =>{
+                  val rowAll: Iterator[Data] = kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map((v) =>{
                     Data(Some(v.value.categorie1_count),Some(v.value.categorie2_count),Some(v.value.categorie3_count))
                   })
 
                   ViewsCountResponse(Some(x),
                     kvStore.fetch(x,to.minusSeconds(100000000),to).asScala.map(v=>v.value.title).take(1).toList.headOption,
                     Some(0),
-                    Some(
                       Stats(row1min.take(1).toList.headOption.getOrElse(Data.empty),
-                        row5min.take(1).toList.headOption.getOrElse(Data.empty),
-                        rowAll.take(1).toList.headOption.getOrElse(Data.empty))
-                    ).getOrElse(Stats.empty))
+                        row5min.take(5).toList.headOption.aggregate(Data.empty)().getOrElse(Data.empty),
+                        rowAll.toList.headOption.getOrElse(Data.empty))
+                    )
                 })
 
           )

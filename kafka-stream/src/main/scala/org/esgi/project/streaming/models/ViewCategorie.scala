@@ -29,14 +29,14 @@ case class ViewAggregate(
   def increment(_id:Int,movie: String,category: String) = {
     category match{
       case "start_only" => {
-        this.copy(_id,movie, categorie1_count= this.categorie1_count + 1)
+        this.copy(_id = _id,title = movie, categorie1_count = this.categorie1_count + 1)
 
       }
       case "half" => {
-        this.copy(_id,movie,categorie2_count= this.categorie2_count + 1)
+        this.copy(_id = _id,title = movie, categorie2_count = this.categorie2_count + 1)
       }
       case _ => {
-        this.copy(_id = _id, title= movie,categorie3_count= this.categorie3_count + 1)
+        this.copy(_id = _id,title = movie, categorie3_count =  this.categorie3_count + 1)
       }
     }
 

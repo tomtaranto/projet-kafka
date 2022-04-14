@@ -24,7 +24,7 @@ object StreamProcessing extends PlayJsonSupport {
   val likesTopicName: String = "likes"
   val viewsTopicName: String = "views"
 
-  val storeMovieID:String = "storeMovieID"
+  val storeMovieID:String = "storeMovieID1"
   val meanScoreStoreName: String = "meanScoreStoreName"
 
   val props = buildProperties
@@ -41,7 +41,7 @@ object StreamProcessing extends PlayJsonSupport {
 //  val viewsGroupedByCategorie: KGroupedStream[String, Views] = views.groupBy((k,v) => v.view_category)
 
   val viewsTitleCategorie_test:KTable[Windowed[Int],ViewAggregate] = views.groupBy((k, v) => (v._id))
-    .windowedBy(TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofSeconds(60)))
+    .windowedBy(TimeWindows.of(Duration.ofMinutes(1)).advanceBy(Duration.ofMinutes(1)))
     .aggregate(ViewAggregate.empty)((k,v,agg) => {
       agg.increment(v._id, v.title,v.view_category)
     })(Materialized.as(storeMovieID))
