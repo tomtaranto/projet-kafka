@@ -6,7 +6,7 @@ import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.state.{QueryableStoreTypes, ReadOnlyKeyValueStore, ReadOnlyWindowStore}
 import org.esgi.project.api.models.{Data, MovieScore, MovieView, Stats, ViewsCountResponse}
-import org.esgi.project.streaming.StreamProcessing.{meanScoreStoreName, storeCountViews, storeMovieID}
+import org.esgi.project.streaming.StreamProcessing.{meanScoreStoreName, storeCountViews, storeMovieID, storeMovieIDfive}
 import org.esgi.project.streaming.models.{MeanScoreForMovies, ViewAggregate}
 
 import java.time.Instant
@@ -20,6 +20,7 @@ object WebServer extends PlayJsonSupport {
         get {
           println(s"request for id : $id")
           val kvStore: ReadOnlyWindowStore[Int, ViewAggregate] = streams.store(storeMovieID, QueryableStoreTypes.windowStore[Int, ViewAggregate]())
+          val kvStore5min: ReadOnlyWindowStore[Int, ViewAggregate] = streams.store(storeMovieIDfive, QueryableStoreTypes.windowStore[Int, ViewAggregate]())
           val to: Instant = Instant.now()
           val from_one: Instant = to.minusSeconds(60)
           val from_five: Instant = to.minusSeconds(5 * 60)
@@ -37,7 +38,7 @@ object WebServer extends PlayJsonSupport {
                     Data(Some(v.value.categorie1_count), Some(v.value.categorie2_count), Some(v.value.categorie3_count))
                   })
 //                  println(row1min.take(1).toList.headOption)
-                  val row5min: Iterator[Data] = kvStore.fetch(x, from_five, to).asScala.map((v) => {
+                  val row5min: Iterator[Data] = kvStore5min.fetch(x, from_five, to).asScala.map((v) => {
                     Data(Some(v.value.categorie1_count), Some(v.value.categorie2_count), Some(v.value.categorie3_count))
                   })
                   val rowAll: Iterator[Data] = kvStore.fetch(x, to.minusSeconds(100000000), to).asScala.map((v) => {
@@ -58,7 +59,7 @@ object WebServer extends PlayJsonSupport {
                     kvStore.fetch(x, 0, Instant.now().toEpochMilli).asScala.map(v => v.value.title).take(1).toList.headOption,
                     Some(0),
                     Stats(kvStore.all().asScala.filter(v => v.value._id.toString == id).foldLeft(Data.empty: Data)((a, b) => a.addData(b.value.categorie1_count, b.value.categorie2_count, b.value.categorie3_count)),
-                      row1min.toList.headOption.getOrElse(Data.empty),
+                      row1min.toList.foldLeft(Data.empty: Data)((a, b) => a.addData(b.start_only.getOrElse(0f), b.half.getOrElse(0f), b.full.getOrElse(0f))),
                       row5min.toList.foldLeft(Data.empty: Data)((a, b) => a.addData(b.start_only.getOrElse(0f), b.half.getOrElse(0f), b.full.getOrElse(0f)))
                     )
                   ).computeTotal()
