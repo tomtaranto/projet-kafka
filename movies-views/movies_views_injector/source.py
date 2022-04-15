@@ -12,7 +12,7 @@ def _load_movies():
             yield Movie(_id=movie["id"], title=movie["original_title"], adult=movie["adult"])
 
 
-movies = [m for m in _load_movies()][:400]
+movies = [m for m in _load_movies()][:200]
 available_view_cats = [v for v in ViewCategory]
 
 
