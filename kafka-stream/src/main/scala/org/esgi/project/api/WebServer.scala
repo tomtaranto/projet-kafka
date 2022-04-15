@@ -63,6 +63,7 @@ object WebServer extends PlayJsonSupport {
 
             kvStore.all().asScala.toList
               .map((k) => MovieScore(k.value.title, k.value.meanScore))
+              .filter(_.score > 3)
               .toList.distinct.sortBy(_.score)(implicitly[Ordering[Float]]).reverse.take(10)
           )
         }
@@ -75,6 +76,7 @@ object WebServer extends PlayJsonSupport {
 
             kvStore.all().asScala.toList
               .map((k) => MovieScore(k.value.title, k.value.meanScore))
+              .filter(_.score < 2)
               .toList.distinct.sortBy(_.score)(implicitly[Ordering[Float]]).take(10)
           )
         }
